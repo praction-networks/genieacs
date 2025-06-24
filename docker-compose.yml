@@ -1,0 +1,77 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  cwmp8103:
+    build: ./cwmp8103
+    container_name: cwmp8103
+    network_mode: host
+    restart: always
+    env_file: ./cwmp8103/.env
+    volumes:
+      - ./cwmp8103/ext:/opt/genieacs/ext:ro
+    depends_on:
+      - mongodb
+
+  cwmp8104:
+    build: ./cwmp8104
+    container_name: cwmp8104
+    network_mode: host
+    restart: always
+    env_file: ./cwmp8104/.env
+    volumes:
+      - ./cwmp8104/ext:/opt/genieacs/ext:ro
+    depends_on:
+      - mongodb
+
+  nbi:
+    build: ./nbi
+    container_name: genieacs-nbi
+    restart: always
+    ports:
+      - "7557:7557"
+    env_file: ./common.env
+    depends_on:
+      - mongodb
+
+  fs:
+    build: ./fs
+    container_name: genieacs-fs
+    restart: always
+    ports:
+      - "7567:7567"
+    env_file: ./common.env
+    depends_on:
+      - mongodb
+
+  ui:
+    build: ./ui
+    container_name: genieacs-ui
+    restart: always
+    expose:
+      - "3000"
+    env_file: ./common.env
+    depends_on:
+      - nbi
+
+  nginx:
+    image: nginx:alpine
+    container_name: genieacs-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - ui
+
+volumes:
+  mongo_data:
